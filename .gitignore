@@ -1,0 +1,16 @@
+﻿node_modules/
+**/node_modules/
+dist/
+**/dist/
+.env
+**/.env
+*.db
+*.db-journal
+*.sqlite
+**/prisma/dev.db
+!**/prisma/*.prisma
+coverage/
+*.log
+.vscode/
+.DS_Store
+*.bak

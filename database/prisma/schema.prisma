@@ -1,0 +1,217 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../server/node_modules/.prisma/client"
+}
+
+model User {
+  id                   String            @id @default(uuid())
+  email                String            @unique
+  passwordHash         String
+  role                 String            // "CONSUMER" | "PROVIDER"
+  isActive             Boolean           @default(true)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  profile              UserProfile?
+  healthProfile        HealthProfile?
+  providerProfile      ProviderProfile?
+  mealLogs             MealLog[]
+  weightHistory        WeightHistory[]
+  cdsAlerts            CdsAlert[]
+  consumerAppointments Appointment[]     @relation("ConsumerAppointments")
+  providerAppointments Appointment[]     @relation("ProviderAppointments")
+  consumerCharts       AdimeChart[]      @relation("ConsumerCharts")
+  providerCharts       AdimeChart[]      @relation("ProviderCharts")
+  auditLogs            AuditLog[]
+}
+
+model UserProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName   String
+  lastName    String
+  phone       String?
+  dateOfBirth DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model HealthProfile {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sex                String   // "MALE" | "FEMALE" | "OTHER"
+  heightCm           Float
+  weightKg           Float
+  activityLevel      String   // "SEDENTARY" | "LIGHT" | "MODERATE" | "ACTIVE" | "VERY_ACTIVE"
+  allergies          String   @default("[]") // JSON string e.g. ["peanuts","dairy"]
+  medicalConditions  String   @default("[]") // JSON string e.g. ["DIABETES","HYPERTENSION","CKD"]
+  nutritionGoals     String   @default("")
+  useAsianPacificBmi Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model WeightHistory {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weightKg   Float
+  recordedAt DateTime @default(now())
+}
+
+model ProviderProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenseNumber String
+  credentials   String   // e.g. "RDN, LDN"
+  bio           String
+  specialties   String   @default("[]") // JSON string array
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AvailabilitySlot {
+  id                  String   @id @default(uuid())
+  providerId          String
+  dayOfWeek           Int      // 0 = Sunday, 1 = Monday, ... 6 = Saturday
+  startTime           String   // "09:00"
+  endTime             String   // "17:00"
+  slotDurationMinutes Int      @default(30)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+}
+
+model Appointment {
+  id              String       @id @default(uuid())
+  consumerId      String
+  consumer        User         @relation("ConsumerAppointments", fields: [consumerId], references: [id], onDelete: Cascade)
+  providerId      String
+  provider        User         @relation("ProviderAppointments", fields: [providerId], references: [id], onDelete: Cascade)
+  scheduledAt     DateTime
+  durationMinutes Int          @default(30)
+  status          String       @default("SCHEDULED") // "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
+  roomName        String       @unique
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  charts          AdimeChart[]
+
+  @@unique([providerId, scheduledAt])
+}
+
+model FoodItem {
+  id           String         @id @default(uuid())
+  name         String
+  category     String         // "Filipino Dishes" | "Grains" | "Proteins" | "Vegetables" | "Fruits" | "Dairy" | "Snacks"
+  servingSize  Float
+  servingUnit  String         // "g" | "cup" | "piece" | "bowl"
+  calories     Float
+  protein      Float          // grams
+  carbs        Float          // grams
+  fat          Float          // grams
+  fiber        Float          // grams
+  sodium       Float          // mg
+  potassium    Float          // mg
+  allergenTags String         @default("[]") // JSON string e.g. ["gluten", "soy"]
+  isVerified   Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+
+  mealItems    MealFoodItem[]
+}
+
+model MealLog {
+  id        String         @id @default(uuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String         // "YYYY-MM-DD"
+  mealType  String         // "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK"
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  items     MealFoodItem[]
+}
+
+model MealFoodItem {
+  id         String   @id @default(uuid())
+  mealLogId  String
+  mealLog    MealLog  @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
+  foodItemId String
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id], onDelete: Cascade)
+  servings   Float    @default(1.0)
+  createdAt  DateTime @default(now())
+}
+
+model AdimeChart {
+  id                             String       @id @default(uuid())
+  appointmentId                  String?
+  appointment                    Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  consumerId                     String
+  consumer                       User         @relation("ConsumerCharts", fields: [consumerId], references: [id], onDelete: Cascade)
+  providerId                     String
+  provider                       User         @relation("ProviderCharts", fields: [providerId], references: [id], onDelete: Cascade)
+  status                         String       @default("DRAFT") // "DRAFT" | "FINALIZED"
+  
+  // 1. Assessment (5 eNCPT domains)
+  assessmentFoodNutritionHistory String       @default("")
+  assessmentAnthropometrics      String       @default("{}") // JSON string
+  assessmentBiochemical          String       @default("[]") // JSON string
+  assessmentPhysicalFindings     String       @default("")
+  assessmentClientHistory        String       @default("")
+  
+  // 2. Diagnosis (PES Statement)
+  diagnosisDomain                String       @default("INTAKE") // "INTAKE" | "CLINICAL" | "BEHAVIORAL_ENVIRONMENTAL"
+  diagnosisTerm                  String       @default("")
+  diagnosisEtiology              String       @default("")
+  diagnosisSignsSymptoms         String       @default("")
+  pesStatement                   String       @default("")
+  
+  // 3. Intervention (4 eNCPT categories)
+  interventionFoodDelivery       String       @default("")
+  interventionEducation          String       @default("")
+  interventionCounseling         String       @default("")
+  interventionCoordination       String       @default("")
+  
+  // 4. Monitoring & Evaluation
+  meIndicators                   String       @default("")
+  meTargets                      String       @default("")
+  meFollowUpDate                 DateTime?
+  
+  // Audit & EHR
+  finalizedAt                    DateTime?
+  ehrExportedAt                  DateTime?
+  ehrEncounterId                 String?
+  createdAt                      DateTime     @default(now())
+  updatedAt                      DateTime     @updatedAt
+}
+
+model CdsAlert {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleId      String
+  severity    String   // "INFO" | "WARNING" | "CRITICAL" | "ALERT" | "FLAG"
+  message     String
+  triggeredAt DateTime @default(now())
+  dismissed   Boolean  @default(false)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  resource  String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}

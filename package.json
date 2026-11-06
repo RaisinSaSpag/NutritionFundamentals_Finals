@@ -1,0 +1,19 @@
+{
+  "name": "tele-nutrition-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tele-nutrition & Digital Health Platform MVP with eNCPT Charting and Video Consultation",
+  "scripts": {
+    "dev": "concurrently -n \"ehr,srv,cli\" -c \"magenta,blue,green\" \"npm run dev --prefix mock-ehr\" \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix server && npm run build --prefix mock-ehr && npm run build --prefix client",
+    "test": "npm run test --prefix server",
+    "test:coverage": "npm run test:coverage --prefix server",
+    "test:e2e": "npm run test --prefix e2e",
+    "lint": "npm run lint --prefix server && npm run lint --prefix client",
+    "db:seed": "npm run db:seed --prefix database",
+    "db:push": "npm run db:push --prefix database"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

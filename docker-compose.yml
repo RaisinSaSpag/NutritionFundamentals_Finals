@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: telenutrition-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-telenutrition}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mock-ehr:
+    build:
+      context: ./mock-ehr
+      dockerfile: Dockerfile
+    container_name: telenutrition-mock-ehr
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+    ports:
+      - "4000:4000"
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: telenutrition-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mock-ehr:
+        condition: service_started
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-telenutrition}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-tele_nutrition_super_secret_jwt_key_2026_demo}
+      CLIENT_ORIGIN: http://localhost:3000
+      MOCK_EHR_URL: http://mock-ehr:4000
+    ports:
+      - "5000:5000"
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: telenutrition-client
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      VITE_API_URL: http://localhost:5000/api
+    ports:
+      - "3000:80"
+
+  sonarqube:
+    image: sonarqube:community
+    container_name: telenutrition-sonarqube
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+
+volumes:
+  postgres_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
