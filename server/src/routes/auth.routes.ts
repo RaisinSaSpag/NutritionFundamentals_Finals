@@ -37,6 +37,8 @@ const providerRegisterSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   phone: z.string().optional(),
   dateOfBirth: z.string().min(1, 'Date of birth is required'),
+  // SECURITY FIX C1: Require invite code for provider registration
+  inviteCode: z.string().min(1, 'Provider invite code is required'),
   providerProfile: z.object({
     licenseNumber: z.string().min(1, 'License number is required'),
     credentials: z.string().min(1, 'Credentials are required (e.g. RDN, LDN)'),
