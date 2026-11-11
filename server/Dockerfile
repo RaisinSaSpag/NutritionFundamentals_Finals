@@ -30,7 +30,7 @@ ENV NODE_ENV=production
 ENV PORT=5000
 
 # Install curl for container health check
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl openssl
 
 # Copy only production dependencies and compiled artifacts
 COPY package*.json ./
