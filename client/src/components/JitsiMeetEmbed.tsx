@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Check, Mic, MicOff, PhoneOff, Video, VideoOff } from 'lucide-react';
+import { Camera, Mic, PhoneOff, Video } from 'lucide-react';
 
 interface JitsiMeetEmbedProps {
   roomName: string;
@@ -44,9 +44,9 @@ export const JitsiMeetEmbed: React.FC<JitsiMeetEmbedProps> = ({
       setMicGranted(true);
       setCamGranted(true);
       setPreJoinPassed(true);
-    } catch (err: any) {
-      console.warn('Camera/mic permission check note:', err);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+    } catch (err: unknown) {
+      const error = err as { name?: string };
+      if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
         setPermissionError('Camera and microphone access was denied. Please allow permissions in your browser bar.');
         setMicGranted(false);
         setCamGranted(false);
@@ -100,8 +100,8 @@ export const JitsiMeetEmbed: React.FC<JitsiMeetEmbedProps> = ({
         api.addEventListener('videoConferenceLeft', () => {
           onSessionEnd();
         });
-      } catch (e) {
-        console.error('Error mounting Jitsi external API:', e);
+      } catch {
+        setPermissionError('Unable to initialize video conferencing client. Please refresh or check network connectivity.');
       }
     }
 
@@ -159,7 +159,7 @@ export const JitsiMeetEmbed: React.FC<JitsiMeetEmbedProps> = ({
             onClick={() => setPreJoinPassed(true)}
             className="w-full py-2 px-3 text-xs text-slate-500 hover:text-slate-700 underline"
           >
-            Bypass hardware pre-check (Demo Mode)
+            Continue with system audio/video defaults
           </button>
         </div>
       </div>

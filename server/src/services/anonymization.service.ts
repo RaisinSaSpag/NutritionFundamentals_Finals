@@ -7,8 +7,53 @@ export function getAge5YearBand(age: number): string {
   return `${lower}-${upper}`;
 }
 
+export interface DeidentifiedDemographics {
+  sex: string;
+  ageBand: string;
+  heightCm: number;
+  weightKg: number;
+  activityLevel: string;
+}
+
+export interface AnonymizedMealSummary {
+  studyDay: string;
+  mealType: string;
+  totalCalories: number;
+  totalProteinG: number;
+  totalCarbsG: number;
+  totalFatG: number;
+  totalSodiumMg: number;
+  totalPotassiumMg: number;
+}
+
+export interface AnonymizedCarePlan {
+  diagnosisDomain: string | null;
+  diagnosisTerm: string | null;
+  interventionCategory: string;
+  monitoringIndicators: string | null;
+}
+
+export interface DeidentifiedSubject {
+  researchSubjectId: string;
+  demographics: DeidentifiedDemographics;
+  clinicalConditions: string[];
+  allergies: string[];
+  loggedMealsSummary: AnonymizedMealSummary[];
+  finalizedCarePlans: AnonymizedCarePlan[];
+}
+
+export interface DeidentifiedResearchDataset {
+  metadata: {
+    exportedAt: string;
+    totalSubjects: number;
+    anonymizationStandard: string;
+    phiStripped: string[];
+  };
+  subjects: DeidentifiedSubject[];
+}
+
 export class AnonymizationService {
-  async getDeidentifiedResearchDataset() {
+  async getDeidentifiedResearchDataset(): Promise<DeidentifiedResearchDataset> {
     const consumers = await prisma.user.findMany({
       where: { role: 'CONSUMER' },
       include: {
@@ -30,7 +75,7 @@ export class AnonymizationService {
       }
     });
 
-    const dataset = consumers.map((c, index) => {
+    const dataset: DeidentifiedSubject[] = consumers.map((c, index) => {
       // Pseudonymization: synthetic research study ID
       const researchSubjectId = `SUBJ-${(index + 1).toString().padStart(4, '0')}`;
 
@@ -47,7 +92,7 @@ export class AnonymizationService {
       // Date generalized relative day sequence
       const earliestMeal = c.mealLogs[0]?.date ? new Date(c.mealLogs[0].date).getTime() : Date.now();
 
-      const anonymizedMeals = c.mealLogs.map((m) => {
+      const anonymizedMeals: AnonymizedMealSummary[] = c.mealLogs.map((m) => {
         const mealTime = new Date(m.date).getTime();
         const studyDay = Math.max(1, Math.round((mealTime - earliestMeal) / 86400000) + 1);
 
@@ -79,12 +124,31 @@ export class AnonymizationService {
       });
 
       // Clinical charts (de-identified diagnosis & intervention categories)
-      const anonymizedCarePlans = c.consumerCharts.map((ch) => ({
+      const anonymizedCarePlans: AnonymizedCarePlan[] = c.consumerCharts.map((ch) => ({
         diagnosisDomain: ch.diagnosisDomain,
         diagnosisTerm: ch.diagnosisTerm,
         interventionCategory: ch.interventionFoodDelivery ? 'Food and/or Nutrient Delivery' : 'Nutrition Education',
         monitoringIndicators: ch.meIndicators
       }));
+
+      let conditions: string[] = [];
+      let allergyList: string[] = [];
+
+      try {
+        if (hp?.medicalConditions) {
+          conditions = JSON.parse(hp.medicalConditions) as string[];
+        }
+      } catch {
+        conditions = [];
+      }
+
+      try {
+        if (hp?.allergies) {
+          allergyList = JSON.parse(hp.allergies) as string[];
+        }
+      } catch {
+        allergyList = [];
+      }
 
       return {
         researchSubjectId,
@@ -95,8 +159,8 @@ export class AnonymizationService {
           weightKg: hp?.weightKg || 0,
           activityLevel: hp?.activityLevel || 'UNKNOWN'
         },
-        clinicalConditions: hp ? JSON.parse(hp.medicalConditions || '[]') : [],
-        allergies: hp ? JSON.parse(hp.allergies || '[]') : [],
+        clinicalConditions: conditions,
+        allergies: allergyList,
         loggedMealsSummary: anonymizedMeals,
         finalizedCarePlans: anonymizedCarePlans
       };

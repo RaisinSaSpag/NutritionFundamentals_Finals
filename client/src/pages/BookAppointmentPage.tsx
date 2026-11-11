@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { Calendar, CheckCircle2, Clock, ShieldCheck, Stethoscope, Video } from 'lucide-react';
+import { Calendar, CheckCircle2, Stethoscope } from 'lucide-react';
 
 export const BookAppointmentPage: React.FC = () => {
   const navigate = useNavigate();

@@ -6,7 +6,6 @@ describe('Appointments & Video Consultation Endpoints', () => {
   let providerToken: string;
   let providerId: string;
   let consumerToken: string;
-  let consumerId: string;
   let otherConsumerToken: string;
   let appointmentId: string;
   let bookingDate: string;
@@ -24,7 +23,6 @@ describe('Appointments & Video Consultation Endpoints', () => {
       .post('/api/auth/login')
       .send({ email: 'alex.healthy@telenutrition.demo', password: 'Password123!' });
     consumerToken = cLogin.body.token;
-    consumerId = cLogin.body.user.id;
 
     // 3. Other Consumer (Clara)
     const oLogin = await request(app)

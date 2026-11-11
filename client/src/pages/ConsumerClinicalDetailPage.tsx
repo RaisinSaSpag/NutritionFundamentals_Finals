@@ -1,24 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { NutritionAnalytics, CdsAlert } from '../types';
+import { NutritionAnalytics } from '../types';
 import { MacroDonutChart } from '../components/Charts/MacroDonutChart';
 import { CalorieTrendChart } from '../components/Charts/CalorieTrendChart';
 import { NutrientRdaBarChart } from '../components/Charts/NutrientRdaBarChart';
 import { CdsAlertBanner } from '../components/CdsAlertBanner';
 import {
-  Activity,
-  AlertTriangle,
   ArrowLeft,
-  CheckCircle,
   Database,
   FileCheck,
-  FileText,
   Lock,
-  Save,
-  Send,
-  Stethoscope,
-  User
+  Save
 } from 'lucide-react';
 
 const ENCPT_DIAGNOSIS_OPTIONS = [

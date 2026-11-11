@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { FoodItem, MealLog } from '../types';
-import { Apple, Calendar, Check, Plus, Search, Trash2, Utensils } from 'lucide-react';
+import { Check, Plus, Search, Trash2, Utensils } from 'lucide-react';
 
 export const MealLoggingPage: React.FC = () => {
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -26,8 +26,8 @@ export const MealLoggingPage: React.FC = () => {
       if (res.foods.length > 0 && !selectedFoodId) {
         setSelectedFoodId(res.foods[0].id);
       }
-    } catch (err: any) {
-      console.error('Error fetching foods:', err);
+    } catch {
+      setErrorMsg('Unable to load verified food items database.');
     }
   };
 
@@ -36,8 +36,8 @@ export const MealLoggingPage: React.FC = () => {
     try {
       const res = await api.get<{ logs: MealLog[] }>(`/meals/day?date=${dateStr}`);
       setDayLogs(res.logs);
-    } catch (err: any) {
-      console.error('Error fetching day logs:', err);
+    } catch {
+      setErrorMsg('Unable to retrieve meal logs for selected date.');
     }
   };
 

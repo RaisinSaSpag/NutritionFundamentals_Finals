@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Apple, ShieldCheck, User, Stethoscope } from 'lucide-react';
+import { Apple, User, Stethoscope } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
   const { registerConsumer, registerProvider } = useAuth();
@@ -299,6 +299,17 @@ export const RegisterPage: React.FC = () => {
                   value={allergies}
                   onChange={(e) => setAllergies(e.target.value)}
                   placeholder="e.g. peanuts, shellfish, dairy"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Personal Nutrition Goals</label>
+                <input
+                  type="text"
+                  value={nutritionGoals}
+                  onChange={(e) => setNutritionGoals(e.target.value)}
+                  placeholder="e.g. Lower fasting blood glucose, increase dietary fiber"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg"
                 />
               </div>

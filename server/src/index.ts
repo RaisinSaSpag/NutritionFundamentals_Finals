@@ -6,5 +6,5 @@ dotenv.config();
 const port = process.env.PORT || 5000;
 
 app.listen(port, () => {
-  console.log(`Tele-nutrition API server running on http://localhost:${port}`);
+  process.stdout.write(`[INIT] Tele-nutrition API service listening on port ${port} (PID: ${process.pid})\n`);
 });

@@ -10,11 +10,9 @@ import {
   Activity,
   Calendar,
   CheckCircle2,
-  ChevronRight,
   Flame,
   Heart,
   Scale,
-  ShieldAlert,
   Utensils,
   Video
 } from 'lucide-react';

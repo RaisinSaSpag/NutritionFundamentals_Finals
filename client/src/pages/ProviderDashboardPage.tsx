@@ -6,8 +6,6 @@ import {
   Calendar,
   ChevronRight,
   Download,
-  FileSpreadsheet,
-  Stethoscope,
   Users,
   Video
 } from 'lucide-react';
@@ -16,8 +14,8 @@ export const ProviderDashboardPage: React.FC = () => {
   const [consumers, setConsumers] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [exportLoading, setExportLoading] = useState<boolean>(false);
-  const [exportData, setExportData] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -28,8 +26,8 @@ export const ProviderDashboardPage: React.FC = () => {
         ]);
         setConsumers(consRes.consumers);
         setAppointments(apptsRes.appointments);
-      } catch (err) {
-        console.error('Failed to load provider data:', err);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to load clinical caseload and appointments.');
       } finally {
         setLoading(false);
       }
@@ -42,7 +40,6 @@ export const ProviderDashboardPage: React.FC = () => {
     setExportLoading(true);
     try {
       const data = await api.get<any>('/export/anonymized');
-      setExportData(data);
 
       // Trigger browser JSON download
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -93,6 +90,12 @@ export const ProviderDashboardPage: React.FC = () => {
           <span>{exportLoading ? 'Generating...' : 'Export De-Identified Dataset'}</span>
         </button>
       </div>
+
+      {error && (
+        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-sm" role="alert">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left: Patient Caseload List */}

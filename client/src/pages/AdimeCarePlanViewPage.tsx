@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { AdimeChart } from '../types';
-import { ArrowLeft, CheckCircle2, FileText, Lock } from 'lucide-react';
+import { ArrowLeft, Lock } from 'lucide-react';
 
 export const AdimeCarePlanViewPage: React.FC = () => {
   const { chartId } = useParams<{ chartId: string }>();

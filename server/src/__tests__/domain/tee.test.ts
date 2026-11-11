@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateTee, ACTIVITY_MULTIPLIERS } from '../../domain/tee';
+import { calculateTee } from '../../domain/tee';
 
 describe('Domain: Total Energy Expenditure (TEE)', () => {
   const bmr = 1500; // Reference baseline BMR

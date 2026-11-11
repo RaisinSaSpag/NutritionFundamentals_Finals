@@ -3,7 +3,9 @@ import jwt from 'jsonwebtoken';
 import { userRepository, UserRepository } from '../repositories/user.repository';
 import { AuthTokenPayload, UserRole } from '../types/auth.types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'tele_nutrition_super_secret_jwt_key_2026_demo';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? (() => {
+  throw new Error('FATAL SECURITY ERROR: JWT_SECRET environment variable is required in production.');
+})() : 'dev_jwt_secret_insecure_local_only');
 const TOKEN_EXPIRY = '7d';
 
 export class AuthService {

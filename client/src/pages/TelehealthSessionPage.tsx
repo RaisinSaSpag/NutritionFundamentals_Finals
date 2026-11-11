@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { JitsiMeetEmbed } from '../components/JitsiMeetEmbed';
-import { ArrowLeft, CheckCircle2, FileText, Video } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, FileText } from 'lucide-react';
 
 export const TelehealthSessionPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,9 +40,9 @@ export const TelehealthSessionPage: React.FC = () => {
   const handleEndSession = async () => {
     try {
       await api.patch(`/appointments/${id}/status`, { status: 'COMPLETED' });
-      setSessionCompleted(true);
-    } catch (err) {
-      console.error('Failed to complete session status:', err);
+    } catch {
+      // Status update failure does not block client exit from video room
+    } finally {
       setSessionCompleted(true);
     }
   };

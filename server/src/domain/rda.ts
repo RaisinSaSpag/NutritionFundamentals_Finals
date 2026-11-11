@@ -1,6 +1,5 @@
 import { Sex } from '../types/health.types';
 import {
-  AMDR_RANGES,
   MICRONUTRIENT_DRI_TABLE,
   PROTEIN_RDA_PER_KG
 } from './constants/rda.constants';

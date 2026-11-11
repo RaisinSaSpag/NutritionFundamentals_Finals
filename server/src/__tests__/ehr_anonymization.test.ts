@@ -65,14 +65,12 @@ describe('Data Privacy, PII Anonymization & EHR Integration Endpoints', () => {
     expect(res.body.error).toContain('Access denied');
   });
 
-  it('retrieves EHR lab observations with graceful fallback handling', async () => {
+  it('handles offline EHR gateway by returning an error instead of fake clinical data', async () => {
     const res = await request(app)
       .get('/api/export/ehr/observations/test-patient-id')
       .set('Authorization', `Bearer ${providerToken}`);
 
-    expect(res.status).toBe(200);
-    expect(res.body.observations).toBeDefined();
-    expect(res.body.observations.length).toBeGreaterThan(0);
-    expect(res.body.message).toBeDefined();
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBeDefined();
   });
 });

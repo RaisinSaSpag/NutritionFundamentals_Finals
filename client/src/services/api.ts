@@ -1,4 +1,16 @@
-const API_BASE = '/api';
+const API_BASE = (import.meta.env.VITE_API_URL as string) || '/api';
+
+export class ApiError extends Error {
+  status: number;
+  details?: unknown;
+
+  constructor(message: string, status: number, details?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.details = details;
+  }
+}
 
 export async function request<T>(
   endpoint: string,
@@ -15,14 +27,15 @@ export async function request<T>(
     credentials: 'include' // Sends httpOnly cookies
   });
 
-  const data = await response.json().catch(() => ({}));
+  const data = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    message?: string;
+    details?: unknown;
+  };
 
   if (!response.ok) {
     const errorMsg = data.error || data.message || `Request failed with status ${response.status}`;
-    const error: any = new Error(errorMsg);
-    error.status = response.status;
-    error.details = data.details;
-    throw error;
+    throw new ApiError(errorMsg, response.status, data.details);
   }
 
   return data as T;
@@ -30,11 +43,11 @@ export async function request<T>(
 
 export const api = {
   get: <T>(url: string) => request<T>(url, { method: 'GET' }),
-  post: <T>(url: string, body?: any) =>
-    request<T>(url, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
-  put: <T>(url: string, body?: any) =>
-    request<T>(url, { method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
-  patch: <T>(url: string, body?: any) =>
-    request<T>(url, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
+  post: <T>(url: string, body?: unknown) =>
+    request<T>(url, { method: 'POST', body: body !== undefined ? JSON.stringify(body) : undefined }),
+  put: <T>(url: string, body?: unknown) =>
+    request<T>(url, { method: 'PUT', body: body !== undefined ? JSON.stringify(body) : undefined }),
+  patch: <T>(url: string, body?: unknown) =>
+    request<T>(url, { method: 'PATCH', body: body !== undefined ? JSON.stringify(body) : undefined }),
   delete: <T>(url: string) => request<T>(url, { method: 'DELETE' })
 };

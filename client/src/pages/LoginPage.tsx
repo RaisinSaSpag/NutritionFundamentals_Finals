@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Apple, Lock, Mail, UserCheck } from 'lucide-react';
+import { Apple, Lock, Mail, ShieldAlert } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -19,16 +19,12 @@ export const LoginPage: React.FC = () => {
     try {
       await login(email, password);
       navigate('/');
-    } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed. Please verify your credentials.';
+      setError(message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const autofill = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('Password123!');
   };
 
   return (
@@ -38,13 +34,16 @@ export const LoginPage: React.FC = () => {
           <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center mx-auto mb-3">
             <Apple className="w-7 h-7" aria-hidden="true" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Tele-Nutrition Platform</h1>
-          <p className="mt-1 text-xs text-slate-500">Sign in to access your digital nutrition care and telehealth sessions</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Tele-Nutrition Portal</h1>
+          <p className="mt-1 text-xs text-slate-500">
+            Sign in to access secure digital nutrition care, clinical documentation, and telehealth
+          </p>
         </div>
 
         {error && (
-          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs" role="alert">
-            {error}
+          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs flex items-start space-x-2" role="alert">
+            <ShieldAlert className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <span>{error}</span>
           </div>
         )}
 
@@ -61,10 +60,11 @@ export const LoginPage: React.FC = () => {
                 id="login-email"
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-9 w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
-                placeholder="you@domain.com"
+                placeholder="clinician@organization.com"
               />
             </div>
           </div>
@@ -81,10 +81,11 @@ export const LoginPage: React.FC = () => {
                 id="login-password"
                 type="password"
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-9 w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
-                placeholder="••••••••"
+                placeholder="••••••••••••"
               />
             </div>
           </div>
@@ -98,54 +99,17 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        {/* 1-Click Demo Logins */}
-        <div className="pt-4 border-t border-slate-200">
-          <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center">
-            <UserCheck className="w-3.5 h-3.5 text-emerald-600 mr-1" aria-hidden="true" />
-            Quick Demo Accounts (1-Click Autofill)
+        <div className="pt-4 border-t border-slate-200 text-center space-y-2">
+          <p className="text-xs text-slate-600">
+            Enrolling for the first time?{' '}
+            <Link to="/register" className="text-emerald-700 hover:underline font-semibold">
+              Create patient account
+            </Link>
           </p>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => autofill('dietitian@telenutrition.demo')}
-              className="p-2 text-left bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md text-emerald-900 font-medium"
-            >
-              👩‍⚕️ <strong>Dietitian (RDN)</strong>
-              <span className="block text-[10px] text-emerald-700">Maria Santos, RDN</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => autofill('juan.diabetes@telenutrition.demo')}
-              className="p-2 text-left bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md text-blue-900 font-medium"
-            >
-              👤 <strong>Diabetic Patient</strong>
-              <span className="block text-[10px] text-blue-700">Juan Dela Cruz</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => autofill('clara.hypertension@telenutrition.demo')}
-              className="p-2 text-left bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-md text-amber-900 font-medium"
-            >
-              👤 <strong>Renal Patient</strong>
-              <span className="block text-[10px] text-amber-700">Clara (CKD/HTN)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => autofill('alex.healthy@telenutrition.demo')}
-              className="p-2 text-left bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md text-slate-900 font-medium"
-            >
-              👤 <strong>Active Patient</strong>
-              <span className="block text-[10px] text-slate-600">Alex Tan</span>
-            </button>
-          </div>
+          <p className="text-[11px] text-slate-400">
+            Healthcare providers: Contact your hospital system administrator for clinical provisioning.
+          </p>
         </div>
-
-        <p className="text-center text-xs text-slate-500 pt-2">
-          New user?{' '}
-          <Link to="/register" className="text-emerald-700 hover:underline font-semibold">
-            Create an account
-          </Link>
-        </p>
       </div>
     </div>
   );
