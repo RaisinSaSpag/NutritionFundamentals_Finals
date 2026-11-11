@@ -4,7 +4,6 @@ import app from '../app';
 
 describe('Provider Dashboard & eNCPT ADIME Charting Endpoints', () => {
   let providerToken: string;
-  let consumerToken: string;
   let juanConsumerId: string;
   let alexConsumerId: string;
 
@@ -25,7 +24,6 @@ describe('Provider Dashboard & eNCPT ADIME Charting Endpoints', () => {
         email: 'juan.diabetes@telenutrition.demo',
         password: 'Password123!'
       });
-    consumerToken = cLogin.body.token;
     juanConsumerId = cLogin.body.user.id;
 
     // 3. Unbooked consumer (brand new user who has never booked with Maria)

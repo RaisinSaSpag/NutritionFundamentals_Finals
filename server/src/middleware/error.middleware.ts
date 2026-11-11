@@ -1,22 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 
-export const errorHandler = (
-  err: any,
-  _req: Request,
-  res: Response,
-  _next: NextFunction
-): void => {
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'An unexpected internal server error occurred.';
-
-  // Mask internal error details in production to preserve security
-  if (process.env.NODE_ENV === 'production' && statusCode === 500) {
+export const errorHandler = (err: any, req: Request, res: Response, _next: NextFunction): void => {
+  const statusCode = Number.isInteger(err?.statusCode) ? err.statusCode : 500;
+  
+  if (statusCode >= 500 && !err?.expose) {
+    console.error('[ERROR]', req.method, req.originalUrl.split('?')[0], err?.name, err?.code, err?.stack);
     res.status(500).json({ error: 'Internal server error.' });
     return;
   }
-
-  res.status(statusCode).json({
-    error: message,
-    ...(err.details && { details: err.details })
+  
+  res.status(statusCode).json({ 
+    error: err?.message || 'Request failed.', 
+    ...(err?.details && { details: err.details }) 
   });
 };

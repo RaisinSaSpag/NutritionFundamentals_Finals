@@ -1,16 +1,14 @@
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import prisma from '../config/prisma';
+import { JWT_SECRET } from '../config/env';
 import { AuthenticatedRequest, AuthTokenPayload, UserRole } from '../types/auth.types';
 
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? (() => {
-  throw new Error('FATAL SECURITY ERROR: JWT_SECRET environment variable is required in production.');
-})() : 'dev_jwt_secret_insecure_local_only');
-
-export const authenticateToken = (
+export const authenticateToken = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-): void => {
+): Promise<void> => {
   const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -19,8 +17,19 @@ export const authenticateToken = (
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
-    req.user = decoded;
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as AuthTokenPayload;
+    
+    const dbUser = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { isActive: true, role: true }
+    });
+
+    if (!dbUser || !dbUser.isActive) {
+      res.status(401).json({ error: 'Invalid or expired session token.' });
+      return;
+    }
+
+    req.user = { ...decoded, role: dbUser.role as UserRole };
     next();
   } catch (err) {
     res.status(401).json({ error: 'Invalid or expired session token.' });

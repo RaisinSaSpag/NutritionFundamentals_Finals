@@ -2,14 +2,13 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { timingSafeEqual } from 'crypto';
 import { userRepository, UserRepository } from '../repositories/user.repository';
+import { JWT_SECRET } from '../config/env';
 import { AuthTokenPayload, UserRole } from '../types/auth.types';
 
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? (() => {
-  throw new Error('FATAL SECURITY ERROR: JWT_SECRET environment variable is required in production.');
-})() : 'dev_jwt_secret_insecure_local_only');
 const TOKEN_EXPIRY = '7d';
+// SECURITY FIX 4b: Dummy hash to prevent timing attacks on unknown emails
+const DUMMY_HASH = '$2a$10$X8/5wT4rF6u7vY8z9A0b1uC2d3E4f5G6h7I8j9K0l1M2n3O4p5Q6r';
 
-// SECURITY FIX H2: Helper to strip password hashes before returning to client
 const toSafeUser = (u: any) => {
   if (!u) return u;
   const { passwordHash, ...safeUser } = u;
@@ -20,28 +19,27 @@ export class AuthService {
   constructor(private userRepo: UserRepository = userRepository) {}
 
   generateToken(payload: AuthTokenPayload): string {
-    // SECURITY FIX H6: Pin algorithm to HS256
     return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY, algorithm: 'HS256' });
   }
 
-  // SECURITY FIX C1: Secure invite code validation
   private isValidInvite(code: unknown): boolean {
-    const expected = process.env.PROVIDER_INVITE_CODE || 'DIETITIAN2026'; 
+    const expected = process.env.PROVIDER_INVITE_CODE;
     if (!expected || typeof code !== 'string') return false;
-    
-    // Use timingSafeEqual to prevent timing attacks
     const a = Buffer.from(code);
     const b = Buffer.from(expected);
-    
-    // Lengths must match to prevent errors
-    if (a.length !== b.length) return false;
-    
-    return timingSafeEqual(a, b);
+    return a.length === b.length && timingSafeEqual(a, b);
   }
 
   async login(email: string, passwordPlain: string) {
     const user = await this.userRepo.findByEmail(email);
-    if (!user || !user.isActive) {
+    
+    if (!user) {
+      // SECURITY FIX 4b: Run dummy compare to equalize timing
+      await bcrypt.compare(passwordPlain, DUMMY_HASH);
+      throw { statusCode: 401, message: 'Invalid email or password.' };
+    }
+
+    if (!user.isActive) {
       throw { statusCode: 401, message: 'Invalid email or password.' };
     }
 
@@ -87,7 +85,6 @@ export class AuthService {
   }
 
   async registerProvider(data: any) {
-    // SECURITY FIX C1: Block registration if invite code is wrong/missing
     if (!this.isValidInvite(data.inviteCode)) {
       throw { statusCode: 403, message: 'Provider registration is by invitation only. Invalid invite code.' };
     }

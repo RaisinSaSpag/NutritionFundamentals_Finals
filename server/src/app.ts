@@ -14,12 +14,16 @@ import exportRoutes from './routes/export.routes';
 
 const app = express();
 
-// Parse and validate client origins
-const allowedOrigins = process.env.CLIENT_ORIGIN
-  ? process.env.CLIENT_ORIGIN.split(',').map((origin) => origin.trim())
-  : ['http://localhost:3000'];
+// SECURITY FIX 2a: Trust Render's reverse proxy
+app.set('trust proxy', 1);
 
-// Security HTTP headers
+const isProd = process.env.NODE_ENV === 'production';
+const allowedOrigins = (process.env.CLIENT_ORIGIN ?? '').split(',').map((o) => o.trim()).filter(Boolean);
+if (allowedOrigins.length === 0) {
+  if (isProd) throw new Error('FATAL: CLIENT_ORIGIN is required in production.');
+  allowedOrigins.push('http://localhost:3000', 'http://localhost:5173');
+}
+
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -37,15 +41,15 @@ app.use(
   })
 );
 
-// Strict CORS configuration
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. server-to-server or health probes) or allowed origins
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error(`CORS blocked request from origin: ${origin}`));
+        const err: any = new Error('Origin not allowed');
+        err.statusCode = 403;
+        callback(err);
       }
     },
     credentials: true,
@@ -54,34 +58,39 @@ app.use(
   })
 );
 
-// General API rate limiting
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // limit each IP to 300 requests per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' }
 });
 app.use('/api/', apiLimiter);
 
-// Specific strict rate limiter on /api/auth/login to prevent brute-force attacks
 const authLoginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // max 10 login attempts per 15 min per IP
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts. Access temporarily restricted. Please try again after 15 minutes.' }
 });
 app.use('/api/auth/login', authLoginLimiter);
 
-// Request parsing & cookies
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many registration attempts.' }
+});
+app.use('/api/auth/register', registerLimiter);
+
 app.use(express.json());
 app.use(cookieParser());
 
-// PII-masking logger
 app.use(piiMaskingLogger);
 
-// Health check endpoint
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
@@ -90,7 +99,6 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/meals', mealRoutes);
 app.use('/api/consumer', consumerRoutes);
@@ -98,7 +106,6 @@ app.use('/api/provider', providerRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/export', exportRoutes);
 
-// Global error handling middleware
 app.use(errorHandler);
 
 export default app;
