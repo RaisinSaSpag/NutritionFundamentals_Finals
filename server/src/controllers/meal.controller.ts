@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { mealService, MealService } from '../services/meal.service';
+import { providerRepository } from '../repositories/provider.repository';
 import { AuthenticatedRequest } from '../types/auth.types';
 
 export class MealController {
@@ -7,7 +8,8 @@ export class MealController {
 
   getFoods = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const q = req.query.q as string | undefined;
+      // SECURITY FIX M10: Validate that q is a string and limit length
+      const q = typeof req.query.q === 'string' ? req.query.q.slice(0, 100) : undefined;
       const foods = await this.service.searchFoods(q);
       res.json({ foods });
     } catch (err) {
@@ -37,7 +39,12 @@ export class MealController {
   getDayLogs = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user!.userId;
-      const date = (req.query.date as string) || new Date().toISOString().split('T')[0];
+      // SECURITY FIX M10: Validate date format to prevent Prisma errors
+      const rawDate = req.query.date;
+      const date = (typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) 
+        ? rawDate 
+        : new Date().toISOString().split('T')[0];
+        
       const logs = await this.service.getDayLogs(userId, date);
       res.json({ date, logs });
     } catch (err) {
@@ -57,13 +64,35 @@ export class MealController {
 
   getAnalytics = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      // Consumers view their own; providers can pass consumerId in query
-      const userId = (req.user!.role === 'PROVIDER' && req.query.consumerId)
-        ? (req.query.consumerId as string)
-        : req.user!.userId;
+      let targetUserId = req.user!.userId;
 
-      const date = req.query.date as string | undefined;
-      const analytics = await this.service.getNutritionAnalytics(userId, date);
+      // SECURITY FIX H4: Prevent IDOR (Insecure Direct Object Reference)
+      if (req.user!.role === 'PROVIDER' && req.query.consumerId !== undefined) {
+        const consumerId = req.query.consumerId;
+
+        if (typeof consumerId !== 'string' || !consumerId) {
+          res.status(400).json({ error: 'Invalid consumerId.' });
+          return;
+        }
+
+        // Verify the provider actually has an appointment with this consumer
+        const hasAccess = await providerRepository.hasAppointmentRelationship(req.user!.userId, consumerId);
+        
+        if (!hasAccess) {
+          res.status(403).json({ error: 'Access denied. No clinical relationship with this consumer.' });
+          return;
+        }
+
+        targetUserId = consumerId;
+      }
+
+      // SECURITY FIX M10: Validate date format
+      const rawDate = req.query.date;
+      const date = (typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) 
+        ? rawDate 
+        : undefined;
+
+      const analytics = await this.service.getNutritionAnalytics(targetUserId, date);
       res.json({ analytics });
     } catch (err) {
       next(err);
